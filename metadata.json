@@ -1,0 +1,8 @@
+{
+  "name": "AgentSpend — Autonomous AI Procurement Agent",
+  "description": "Autonomous AI procurement agent that researches digital resources, validates budgets with SpendGuard, requires human approval, and executes secure PayPal checkout.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
