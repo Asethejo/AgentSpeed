@@ -269,7 +269,85 @@ Contributions and suggestions are welcome.
 2. Create a feature branch.
 3. Commit your changes.
 4. Open a pull request.
+```markdown
+# AgentSpeed Backend
 
+FastAPI backend for AgentSpeed. It enforces spending rules, requires human approval for every purchase, verifies PayPal Sandbox payments on the server, and unlocks resources only after payment is verified.
+
+> All catalog resources are simulated. Only PayPal Sandbox payments are real, and only with sandbox credentials configured.
+
+## Setup
+
+From the `backend` folder (Windows):
+
+```bash
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+copy .env.example .env
+uvicorn app.main:app --reload
+```
+
+- API docs: http://127.0.0.1:8000/docs
+- Health check: http://127.0.0.1:8000/health
+
+## Configuration
+
+Set these in `backend/.env`. Never commit this file.
+
+| Variable | Purpose |
+|---|---|
+| `PAYPAL_ENV` | Must be `sandbox` |
+| `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET` | Sandbox app credentials |
+| `GEMINI_API_KEY` | Optional. Without it, reports use labelled fallback text. |
+| `FRONTEND_ORIGINS` | Allowed frontend URLs (default: ports 3000 and 5173) |
+| `MONTHLY_BUDGET` | Dashboard budget (default: 500) |
+| `DB_PATH` | SQLite file (default: `backend/agentspend.db`) |
+
+Without PayPal credentials, the server still runs, and payment endpoints return `503`.
+
+## Structure
+
+```
+app/
+  main.py          Routes
+  spendguard.py    Policy checks
+  recommender.py   Resource ranking
+  paypal.py        PayPal client and verification
+  reports.py       Report and receipt
+  ai_agent.py      Optional Gemini wording
+  catalog.py       Simulated resources
+  storage.py       SQLite store
+tests/smoke_test.py
+```
+
+## Purchase flow
+
+1. `POST /tasks`: create a task with a budget and rules.
+2. `POST /tasks/{id}/analyze`: rank resources and run SpendGuard.
+3. `POST /purchases`: request purchases (refused if SpendGuard blocks them).
+4. `POST /purchases/{id}/approve`: human approval, re-checked against SpendGuard.
+5. `POST /paypal/create-order`, then `POST /paypal/capture-order`: pay and verify. The resource unlocks only after verification.
+6. `POST /tasks/{id}/execute`: report from unlocked resources only.
+7. `GET /purchases/{id}/receipt`: decision receipt.
+
+## Testing
+
+```bash
+python tests/smoke_test.py
+```
+
+Uses a fake PayPal, so no credentials needed. Expected last line: `ALL 17 CHECKS PASSED`. This does not test the real PayPal Sandbox. Test that by hand.
+
+## Limitations
+
+- Greedy selection, not an optimal plan.
+- SQLite storage, suitable for a demo only.
+- Activation is simulated.
+- If a capture succeeds but verification fails, the purchase is marked `payment_failed` and must be refunded manually.
+- USD only. The receipt is JSON, not a cryptographic signature.
+
+#
 ## License
 
 This project is licensed under the MIT License. See the `LICENSE` file for details.
